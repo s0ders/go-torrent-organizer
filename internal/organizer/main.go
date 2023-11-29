@@ -2,6 +2,7 @@ package organizer
 
 import (
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
@@ -11,30 +12,35 @@ import (
 
 var (
 	mediaExtensions = []string{"mkv", "mp4"}
+	logger = slog.New(slog.NewJSONHandler(os.Stderr, nil))
 )
 
 // Organize takes a torrent and create a Kodi friendly folder
 // then moves the torrent files inside the previously created
 // folder.
-func Organize(destinationPath, contentPath, name string) error {
+func Organize(destinationPath, contentPath string) error {
 
-	name = strings.TrimSpace(name)
+	torrentName := strings.TrimSpace(filepath.Base(contentPath))
 
-	info, err := PTN.Parse(name)
+	logger.Info("torrent name", "name", torrentName)
+
+	torrentInfo, err := PTN.Parse(torrentName)
 	if err != nil {
 		return err
 	}
 
-	isMovie := info.Season == 0
-	mediaName := fmt.Sprintf("%s (%d)", info.Title, info.Year)
+	logger.Info("torrent infos", "infos", fmt.Sprintf("%+v", torrentInfo))
+
+	isMovie := torrentInfo.Season == 0
+	mediaName := fmt.Sprintf("%s (%d)", torrentInfo.Title, torrentInfo.Year)
 
 	var mediaPath string
 
 	// First, create Kodi folder
-	if isMovie == 0 {
+	if isMovie {
 		mediaPath = filepath.Join(destinationPath, "Movies", mediaName)
 	} else {
-		seasonName := fmt.Sprintf("Season %d", info.Season)
+		seasonName := fmt.Sprintf("Season %d", torrentInfo.Season)
 
 		showPath := filepath.Join(destinationPath, "TV Shows", mediaName)
 		mediaPath = filepath.Join(showPath, seasonName)
@@ -45,29 +51,43 @@ func Organize(destinationPath, contentPath, name string) error {
 	}
 
 	// Second, move torrent file(s) into Kodi's folder
-	medias, err := filepath.Glob(fmt.Sprintf("%s/*.[%s]", contentPath, strings.Join(mediaExtensions, "|")))
+	filesGlob := filepath.Join(contentPath, "*.mkv")
+
+	files, err := filepath.Glob(filesGlob)
 	if err != nil {
 		return err
 	}
 
-	fmt.Println(medias)
+	logger.Info("files found", "slice", fmt.Sprintf("%v", files))
 
-	for _, media := range medias {
+	for _, file := range files {
+	
+		// Handle when no info Season nor Episode, use index for episode and default to S01
+		ext := filepath.Ext(file)
+		name := strings.Replace(filepath.Base(file), ext, "", -1)
+
+		info, err := PTN.Parse(name)
+		if err != nil {
+			return err
+		}
+
+		newFile := renameFile(name, ext, isMovie, info)
+		newFilePath := filepath.Join(mediaPath, newFile)
 		
+		if err := os.Rename(file, newFilePath); err != nil {
+			return err
+		}
 
-
-
-		if err := os.Rename(media, )
 	}
 
 	return nil
 }
 
 
-func renameMedia(name, ext string, isMovie bool, info *PTN.TorrentInfo) string {
+func renameFile(name, ext string, isMovie bool, info *PTN.TorrentInfo) string {
 	if isMovie {
-		return fmt.Sprintf("%s (%d).%s", info.Title, info.Year, ext)
+		return fmt.Sprintf("%s (%d)%s", info.Title, info.Year, ext)
 	}
 
-	return fmt.Sprintf("%s (%d) S%02dE%02d.%s", info.Title, info.Year, info.Season, ext)
+	return fmt.Sprintf("%s (%d) S%02dE%02d%s", info.Title, info.Year, info.Season, ext)
 }
