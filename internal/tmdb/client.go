@@ -2,11 +2,14 @@ package tmdb
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
-	URL "net/url"
+	"net/url"
 	"strings"
 	"time"
+
+	"github.com/spf13/viper"
 )
 
 type Data struct {
@@ -18,18 +21,18 @@ type Result struct {
 }
 
 var (
-	tmdbURL = "https://api.themoviedb.org/3/search/tv?query={show}&include_adult=true&language=en-US&page=1"
+	tmdbSearchURL = "https://api.themoviedb.org/3/search/tv?query={show}&include_adult=true&language=en-US&page=1"
 )
 
 func QueryYear(s string) (year int, err error) {
 
-	show := URL.QueryEscape(s)
-	url := strings.ReplaceAll(tmdbURL, "{show}", show)
+	show := url.QueryEscape(s)
+	query := strings.ReplaceAll(tmdbSearchURL, "{show}", show)
 
-	req, _ := http.NewRequest("GET", url, nil)
+	req, _ := http.NewRequest("GET", query, nil)
 
 	req.Header.Add("accept", "application/json")
-	req.Header.Add("Authorization", "Bearer {TOKEN}")
+	req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", viper.GetString("tmdb")))
 
 	res, err := http.DefaultClient.Do(req)
 	if err != nil {

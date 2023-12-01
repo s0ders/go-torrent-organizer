@@ -32,9 +32,17 @@ func Organize(destinationPath, contentPath string) error {
 	logger.Info("torrent", "infos", fmt.Sprintf("%+v", torrentInfo))
 
 	isMovie := torrentInfo.Season == 0
-	mediaName := fmt.Sprintf("%s (%d)", torrentInfo.Title, torrentInfo.Year)
 
-	var mediaPath string
+	var (
+		mediaName string
+		mediaPath string
+	)
+
+	if torrentInfo.Year != 0 {
+		mediaName = fmt.Sprintf("%s (%d)", torrentInfo.Title, torrentInfo.Year)
+	} else {
+		mediaName = torrentInfo.Title
+	}
 
 	// Create Kodi folder
 	if isMovie {
@@ -50,13 +58,12 @@ func Organize(destinationPath, contentPath string) error {
 		return err
 	}
 
-	// Move torrent file(s)
-	// TODO: fix to use mediaExtensions var
-	filesGlob := filepath.Join(contentPath, "*.mkv")
+	files := []string{}
 
-	files, err := filepath.Glob(filesGlob)
-	if err != nil {
-		return err
+	for _, ext := range mediaExtensions {
+		path := filepath.Join(contentPath, fmt.Sprintf("*.%s", ext))
+		extFiles, _ := filepath.Glob(path)
+		files = append(files, extFiles...)
 	}
 
 	logger.Info("files", "slice", fmt.Sprintf("%v", files))

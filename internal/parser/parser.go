@@ -7,6 +7,8 @@ import (
 	"strings"
 
 	"github.com/s0ders/go-torrent-organizer/internal/tmdb"
+
+	"github.com/spf13/viper"
 )
 
 var (
@@ -36,7 +38,7 @@ func Parse(s string) (*TorrentInfo, error) {
 		return nil, err
 	}
 
-	if year == 0 {
+	if year == 0 && viper.IsSet("tmdb") {
 		if year, err = tmdb.QueryYear(title); err != nil {
 			return nil, err
 		}
@@ -74,6 +76,19 @@ func ParseToJSON(s string) (string, error) {
 	}
 
 	return string(marshalled), nil
+}
+
+func cleanTorrentName(s string) string {
+
+	dots := PatternDotSeparator.FindString(s)
+	replacer := strings.Repeat("_", len(dots))
+
+	s = PatternDotSeparator.ReplaceAllLiteralString(s, replacer)
+	s = strings.ReplaceAll(s, ".", " ")
+	s = strings.ReplaceAll(s, "_", ".")
+	s = strings.TrimSpace(s)
+
+	return s
 }
 
 func title(s string) string {
@@ -120,17 +135,4 @@ func matchPatternAndReturnInt(s string, pattern *regexp.Regexp) (int, error) {
 	}
 
 	return target, nil
-}
-
-func cleanTorrentName(s string) string {
-
-	dots := PatternDotSeparator.FindString(s)
-	replacer := strings.Repeat("_", len(dots))
-
-	s = PatternDotSeparator.ReplaceAllLiteralString(s, replacer)
-	s = strings.ReplaceAll(s, ".", " ")
-	s = strings.ReplaceAll(s, "_", ".")
-	s = strings.TrimSpace(s)
-
-	return s
 }
