@@ -1,23 +1,19 @@
 package parser
 
 import (
-	"errors"
+	"encoding/json"
 	"regexp"
 	"strconv"
 	"strings"
 )
 
 var (
-	PatternTitle        = regexp.MustCompile(`(.*)((19[0-9]{2}|20[0-9]{2})|([S|s]([0-9]{1,2})))`)
+	PatternTitleYear    = regexp.MustCompile(`(.*)(19[0-9]{2}|20[0-9]{2})`)
+	PatternTitleSeason  = regexp.MustCompile(`(.*)([Ss][0-9]{1,2})`)
 	PatternYear         = regexp.MustCompile(`(19[0-9]{2}|20[0-9]{2})`)
 	PatternSeason       = regexp.MustCompile(`[Ss]([0-9]{1,2})`)
-	PatternEpisode      = regexp.MustCompile(`[Ss][0-9]{1,2}[Ee]([0-9]{1,2})`)
+	PatternEpisode      = regexp.MustCompile(`[Ss][0-9]{1,2}\s*[Ee]([0-9]{1,2})`)
 	PatternDotSeparator = regexp.MustCompile(`\.{2,}`)
-
-	ErrNoTitle   = errors.New("title not found")
-	ErrNoYear    = errors.New("year not found")
-	ErrNoSeason  = errors.New("season not found")
-	ErrNoEpisode = errors.New("episode not found")
 )
 
 type TorrentInfo struct {
@@ -29,23 +25,20 @@ type TorrentInfo struct {
 
 func Parse(s string) (*TorrentInfo, error) {
 
-	title, err := Title(s)
+	title := title(s)
+
+	year, err := matchPatternAndReturnInt(s, PatternYear)
 	if err != nil {
 		return nil, err
 	}
 
-	year, err := MatchPatternAndReturnInt(s, PatternYear, ErrNoYear)
-	if err != nil && !errors.Is(err, ErrNoYear) {
+	season, err := matchPatternAndReturnInt(s, PatternSeason)
+	if err != nil {
 		return nil, err
 	}
 
-	season, err := MatchPatternAndReturnInt(s, PatternSeason, ErrNoSeason)
-	if err != nil && !errors.Is(err, ErrNoSeason) {
-		return nil, err
-	}
-
-	episode, err := MatchPatternAndReturnInt(s, PatternEpisode, ErrNoEpisode)
-	if err != nil && !errors.Is(err, ErrNoEpisode) {
+	episode, err := matchPatternAndReturnInt(s, PatternEpisode)
+	if err != nil {
 		return nil, err
 	}
 
@@ -59,30 +52,56 @@ func Parse(s string) (*TorrentInfo, error) {
 	return infos, nil
 }
 
-func Title(s string) (string, error) {
-	matches := PatternTitle.FindStringSubmatch(s)
+func ParseToJSON(s string) (string, error) {
+	infos, err := Parse(s)
+	if err != nil {
+		return "", err
+	}
 
-	title := matches[1]
+	marshalled, err := json.Marshal(infos)
+	if err != nil {
+		return "", err
+	}
+
+	return string(marshalled), nil
+}
+
+func title(s string) (string) {
+	var title string
+
+	matches := PatternTitleYear.FindStringSubmatch(s)
+
+	if len(matches) > 2 {
+		title = matches[1]
+	}
 
 	if title == "" {
-		return "", ErrNoTitle
+		matches = PatternTitleSeason.FindStringSubmatch(s)
+
+		if len(matches) > 2 {
+			title = matches[1]
+		}
 	}
 
 	title = cleanTorrentName(title)
-	return title, nil
+	return title
 }
 
-// MatchPatternAndReturnInt tries to find the given pattern
+// matchPatternAndReturnInt tries to find the given pattern
 // inside a given string and returns the last match capturing
 // group converted to an integer, if no match are found,
 // the given error is returned.
-func MatchPatternAndReturnInt(s string, pattern *regexp.Regexp, notFoundError error) (int, error) {
+func matchPatternAndReturnInt(s string, pattern *regexp.Regexp) (int, error) {
 	matches := pattern.FindAllStringSubmatch(s, -1)
+
+	if len(matches) == 0 {
+		return 0, nil
+	}
 
 	lastMatch := matches[len(matches)-1]
 
 	if lastMatch[1] == "" {
-		return 0, notFoundError
+		return 0, nil
 	}
 
 	target, err := strconv.Atoi(lastMatch[1])
