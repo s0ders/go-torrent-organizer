@@ -2,9 +2,7 @@
 
 # Go Torrent Organizer
 
-A CLI tool meant to be used a post-download hook of your favorite torrent client to automatically organize your downloaded movies or TV shows in a clean way.
-
-
+A CLI tool meant to be used as a post-download hook of your favorite torrent client to automatically organize your downloaded movies or TV shows in a clean and friendly way for media centers such as [Kodi](https://kodi.tv/) or [Plex](https://www.plex.tv/fr/).
 
 ## Usage
 
