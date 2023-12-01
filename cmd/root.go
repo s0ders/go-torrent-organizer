@@ -8,7 +8,7 @@ import (
 )
 
 var rootCmd = &cobra.Command{
-	Use:   "organizer",
+	Use:   "go-torrent-organizer",
 	Short: "A tool to organize your torrent movies and shows",
 	Long: `go-torrent-organizer is a CLI meant to be used as a hook by
 	your torrent client to automatically rename and organize your downloaded

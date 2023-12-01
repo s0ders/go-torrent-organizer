@@ -10,7 +10,7 @@ func init() {
 }
 
 var organizeCmd = &cobra.Command{
-	Use:   "organize",
+	Use:   "organize DESTINATION_ROOT DOWNLOADED_CONTENT_ROOT",
 	Short: "Organize torrent downloaded files into Kodi folder structure",
 	Args:  cobra.ExactArgs(2),
 	RunE: func(cmd *cobra.Command, args []string) error {

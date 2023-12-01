@@ -12,7 +12,7 @@ func init() {
 }
 
 var parseCmd = &cobra.Command{
-	Use:   "parser",
+	Use:   "parse TORRENT_FILE_NAME",
 	Short: "Parses a torrent file name to extract informations",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
