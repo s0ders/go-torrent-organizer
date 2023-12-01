@@ -5,6 +5,8 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+
+	"github.com/s0ders/go-torrent-organizer/internal/tmdb"
 )
 
 var (
@@ -25,11 +27,19 @@ type TorrentInfo struct {
 
 func Parse(s string) (*TorrentInfo, error) {
 
+	s = strings.TrimSpace(s)
+
 	title := title(s)
 
 	year, err := matchPatternAndReturnInt(s, PatternYear)
 	if err != nil {
 		return nil, err
+	}
+
+	if year == 0 {
+		if year, err = tmdb.QueryYear(title); err != nil {
+			return nil, err
+		}
 	}
 
 	season, err := matchPatternAndReturnInt(s, PatternSeason)
@@ -66,7 +76,7 @@ func ParseToJSON(s string) (string, error) {
 	return string(marshalled), nil
 }
 
-func title(s string) (string) {
+func title(s string) string {
 	var title string
 
 	matches := PatternTitleYear.FindStringSubmatch(s)

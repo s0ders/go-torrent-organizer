@@ -22,14 +22,14 @@ func Organize(destinationPath, contentPath string) error {
 
 	torrentName := strings.TrimSpace(filepath.Base(contentPath))
 
-	logger.Info("torrent name", "name", torrentName)
+	logger.Info("torrent", "name", torrentName)
 
-	torrentInfo, err := parser.Parse(strings.ReplaceAll(torrentName, ".", " "))
+	torrentInfo, err := parser.Parse(torrentName)
 	if err != nil {
 		return err
 	}
 
-	logger.Info("torrent infos", "infos", fmt.Sprintf("%+v", torrentInfo))
+	logger.Info("torrent", "infos", fmt.Sprintf("%+v", torrentInfo))
 
 	isMovie := torrentInfo.Season == 0
 	mediaName := fmt.Sprintf("%s (%d)", torrentInfo.Title, torrentInfo.Year)
@@ -51,6 +51,7 @@ func Organize(destinationPath, contentPath string) error {
 	}
 
 	// Move torrent file(s)
+	// TODO: fix to use mediaExtensions var
 	filesGlob := filepath.Join(contentPath, "*.mkv")
 
 	files, err := filepath.Glob(filesGlob)
@@ -58,10 +59,9 @@ func Organize(destinationPath, contentPath string) error {
 		return err
 	}
 
-	logger.Info("files found", "slice", fmt.Sprintf("%v", files))
+	logger.Info("files", "slice", fmt.Sprintf("%v", files))
 
 	for _, file := range files {
-
 		// TODO: Handle when no info Season nor Episode, use index for episode and default to S01
 		ext := filepath.Ext(file)
 		name := strings.ReplaceAll(filepath.Base(file), ext, "")
@@ -77,7 +77,6 @@ func Organize(destinationPath, contentPath string) error {
 		if err := os.Rename(file, newFilePath); err != nil {
 			return err
 		}
-
 	}
 
 	return nil

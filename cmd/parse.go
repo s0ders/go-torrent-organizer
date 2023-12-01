@@ -15,7 +15,7 @@ var parseCmd = &cobra.Command{
 	Use:   "parser",
 	Short: "Parses a torrent file name to extract informations",
 	Args:  cobra.ExactArgs(1),
-	RunE: func(cmd *cobra.Command, args []string) (error) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		infos, err := parser.ParseToJSON(args[0])
 		if err != nil {
 			return err
