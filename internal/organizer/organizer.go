@@ -18,7 +18,7 @@ var (
 // Organize takes a torrent and create a Kodi friendly folder
 // then moves the torrent files inside the previously created
 // folder.
-func Organize(destinationPath, contentPath string) error {
+func Organize(destinationPathRoot, contentPath string) error {
 
 	torrentName := strings.TrimSpace(filepath.Base(contentPath))
 	torrentInfo, err := parser.Parse(torrentName)
@@ -28,50 +28,44 @@ func Organize(destinationPath, contentPath string) error {
 
 	logger.Info("TORRENT", "infos", fmt.Sprintf("%+v", torrentInfo))
 
-	isMovie := torrentInfo.Season == 0
+	contentIsMovie := torrentInfo.Season == 0
+	contentIsDirectory := filepath.Ext(contentPath) == ""
 
-	var (
-		mediaName string
-		mediaPath string
-	)
+	var organizedName string
+	var organizedPath string
 
 	if torrentInfo.Year != 0 {
-		mediaName = fmt.Sprintf("%s (%d)", torrentInfo.Title, torrentInfo.Year)
+		organizedName = fmt.Sprintf("%s (%d)", torrentInfo.Title, torrentInfo.Year)
 	} else {
-		mediaName = torrentInfo.Title
+		organizedName = torrentInfo.Title
 	}
 
 	// Create Kodi folder
-	if isMovie {
-		mediaPath = filepath.Join(destinationPath, "Movies", mediaName)
+	if contentIsMovie {
+		organizedPath = filepath.Join(destinationPathRoot, "Movies", organizedName)
 	} else {
-		seasonName := fmt.Sprintf("Season %d", torrentInfo.Season)
-		mediaPath = filepath.Join(destinationPath, "TV Shows", mediaName, seasonName)
+		season := fmt.Sprintf("Season %d", torrentInfo.Season)
+		organizedPath = filepath.Join(destinationPathRoot, "TV Shows", organizedName, season)
 	}
 
-	if err := os.MkdirAll(mediaPath, 0750); err != nil {
+	if err := os.MkdirAll(organizedPath, 0750); err != nil {
 		return err
 	}
 
-	globPath := filepath.Join(contentPath, "*.mkv")
-	files, _ := filepath.Glob(globPath)
-
-	logger.Info("FILES", "files", fmt.Sprintf("%v", files))
-
-	for _, file := range files {
-		// TODO: Handle when no info Season nor Episode, use index for episode and default to S01
-		ext := filepath.Ext(file)
-		name := strings.ReplaceAll(filepath.Base(file), ext, "")
-
-		info, err := parser.Parse(name)
-		if err != nil {
+	if !contentIsDirectory {
+		if err := moveFile(contentPath, organizedPath, contentIsMovie); err != nil {
 			return err
 		}
+	}
 
-		newFile := renameFile(name, ext, isMovie, info)
-		newFilePath := filepath.Join(mediaPath, newFile)
+	globPath := filepath.Join(contentPath, "*.mkv")
+	globFiles, _ := filepath.Glob(globPath)
 
-		if err := os.Rename(file, newFilePath); err != nil {
+	logger.Info("FILES", "files", fmt.Sprintf("%v", globFiles))
+
+	for _, file := range globFiles {
+		// TODO: Handle when no info Season nor Episode, use index for episode and default to S01
+		if err := moveFile(file, organizedPath, contentIsMovie); err != nil {
 			return err
 		}
 	}
@@ -79,10 +73,29 @@ func Organize(destinationPath, contentPath string) error {
 	return nil
 }
 
-func renameFile(name, ext string, isMovie bool, info *parser.TorrentInfo) string {
-	if isMovie {
+func renameFile(name, ext string, movie bool, info *parser.TorrentInfo) string {
+	if movie {
 		return fmt.Sprintf("%s (%d)%s", info.Title, info.Year, ext)
 	}
 
 	return fmt.Sprintf("%s (%d) S%02dE%02d%s", info.Title, info.Year, info.Season, info.Episode, ext)
+}
+
+func moveFile(file, destination string, movie bool) error {
+	ext := filepath.Ext(file)
+	name := strings.ReplaceAll(filepath.Base(file), ext, "")
+
+	info, err := parser.Parse(name)
+	if err != nil {
+		return err
+	}
+
+	newFileName := renameFile(name, ext, movie, info)
+	newFilePath := filepath.Join(destination, newFileName)
+
+	if err := os.Rename(file, newFilePath); err != nil {
+		return err
+	}
+
+	return nil
 }
