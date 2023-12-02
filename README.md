@@ -4,6 +4,8 @@
 
 A CLI tool meant to be used as a post-download hook of your favorite torrent client to automatically organize your downloaded movies or TV shows in a clean and friendly way for media centers such as [Kodi](https://kodi.tv/) or [Plex](https://www.plex.tv/fr/).
 
+For the moment, the CLI is only compatible with Linux and macOS, not Windows.
+
 ## Usage
 
 #### Parse
